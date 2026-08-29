@@ -6,12 +6,12 @@ _md5=1763096b
 _electron=electron40
 pkgname=qq-electron
 pkgver="${_base_pkgver//-/_}"
-pkgrel=8
+pkgrel=9
 pkgdesc='Tencent QQ running on the system Electron 40 runtime'
 arch=('x86_64')
 url='https://im.qq.com/linuxqq/index.shtml'
 license=('LicenseRef-Tencent-QQ')
-depends=($_electron libssh2 libunwind libvips)
+depends=($_electron libssh2 libunwind)
 makedepends=('asar' 'git')
 optdepends=(
 	'gjs: GNOME Wayland screenshot support'
@@ -40,7 +40,7 @@ prepare() {
 	node "${srcdir}/qq-electron/scripts/decrypt-application.js" \
 		"${source_root}/opt/QQ/resources/app/application.asar" \
 		"${source_root}/opt/QQ/qq"
-	rm -f "${source_root}/opt/QQ/resources/app"/{libssh2.so.1,avsdk/bugly/libssh2.so.1,libunwind{,-x86_64}.so.8,avsdk/bugly/libunwind{,-x86_64}.so.8,sharp-lib/libvips-cpp.so.42}
+	rm -f "${source_root}/opt/QQ/resources/app"/{libssh2.so.1,avsdk/bugly/libssh2.so.1,libunwind{,-x86_64}.so.8,avsdk/bugly/libunwind{,-x86_64}.so.8}
 
 	cd "${source_root}"
 	sed -i opt/QQ/resources/app/package.json \
@@ -53,11 +53,11 @@ prepare() {
 }
 
 build() {
-	cc $(pkg-config --cflags vips) ${CPPFLAGS} ${CFLAGS} -fPIC -shared \
+	cc ${CPPFLAGS} ${CFLAGS} -fPIC -shared \
 		-Wl,-soname,libelectron-compat.so \
 		-o "${srcdir}/libelectron-compat.so" \
 		"${srcdir}/qq-electron/electron-compat.c" \
-		${LDFLAGS} $(pkg-config --libs vips) -ldl
+		${LDFLAGS} -ldl
 }
 
 _hack_preloaders() {
