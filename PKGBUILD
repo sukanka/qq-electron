@@ -6,7 +6,7 @@ _md5=1763096b
 _electron=electron40
 pkgname=qq-electron
 pkgver="${_base_pkgver//-/_}"
-pkgrel=3
+pkgrel=5
 pkgdesc='Tencent QQ running on the system Electron 40 runtime'
 arch=('x86_64')
 url='https://im.qq.com/linuxqq/index.shtml'
@@ -28,7 +28,7 @@ source=(
 	'qq-electron.sh'
 )
 sha256sums=('SKIP'
-	'54f8254c994bdeac53fa53e490eaee5014af43831b1d97860465b376b6b4899c')
+            'b8042dd1f0ce903570a3927eed4fc4e698ed94b96688b90ca5084d0684bffdf2')
 sha256sums_x86_64=('502a978f2d03af9f21acefc461f9d1d1fe09b65bad620bbfcdb589a79ac53b7e')
 
 prepare() {
@@ -54,15 +54,15 @@ prepare() {
 
 build() {
 	cc $(pkg-config --cflags vips) ${CPPFLAGS} ${CFLAGS} -fPIC -shared \
-		-Wl,-soname,libqq-electron-compat.so \
-		-o "${srcdir}/libqq-electron-compat.so" \
+		-Wl,-soname,libelectron-compat.so \
+		-o "${srcdir}/libelectron-compat.so" \
 		"${srcdir}/qq-electron/electron-compat.c" \
 		${LDFLAGS} $(pkg-config --libs vips) -ldl
 }
 
 _hack_preloaders() {
 
-	pushd ${pkgdir}/usr/lib/qq/resources/app/
+	pushd ${pkgdir}/usr/lib/QQ/resources/app/
 	local preload_loader _preloaders
 	_preloaders=(
 		""
@@ -89,15 +89,16 @@ package() {
 
 	cd "${srcdir}/linuxqq-root"
 
-	install -d "${pkgdir}/usr/lib/qq/resources"
-	cp -ar "opt/QQ/resources/app" "${pkgdir}/usr/lib/qq/resources/"
+	# FGESDK mistakes lowercase "qq" in native mapping paths for the main executable.
+	install -d "${pkgdir}/usr/lib/QQ/resources"
+	cp -ar "opt/QQ/resources/app" "${pkgdir}/usr/lib/QQ/resources/"
 	cp -ar usr/share ${pkgdir}/usr/share
-	install -Dm644 "opt/QQ/version.json" -t "${pkgdir}/usr/lib/qq"
-	install -Dm755 "${srcdir}/libqq-electron-compat.so" -t "${pkgdir}/usr/lib/qq"
+	install -Dm644 "opt/QQ/version.json" -t "${pkgdir}/usr/lib/QQ"
+	install -Dm755 "${srcdir}/libelectron-compat.so" -t "${pkgdir}/usr/lib/QQ"
 	install -Dm755 "${srcdir}/qq-electron.sh" "${pkgdir}/usr/bin/qq"
 
 	cd ${srcdir}/qq-electron
-	install -Dm644 *.js -t "${pkgdir}/usr/lib/qq/resources/app"
+	install -Dm644 *.js -t "${pkgdir}/usr/lib/QQ/resources/app"
 
 	_hack_preloaders
 }

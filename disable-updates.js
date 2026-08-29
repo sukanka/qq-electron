@@ -4,6 +4,12 @@ const { contextBridge } = require('electron');
 
 function installHotUpdateBlocker() {
   const chunkGlobalName = 'webpackChunkqq_chat';
+  const installed = Symbol.for('qq-electron.hot-update-blocker');
+
+  if (globalThis[installed]) return;
+
+  Object.defineProperty(globalThis, installed, { value: true });
+
   const attachedQueues = new WeakSet();
   const wrappedFactories = new WeakMap();
 
@@ -115,13 +121,16 @@ function installHotUpdateBlocker() {
 
     for (const chunk of queue) patchChunk(chunk);
 
-    let downstreamPush = queue.push;
-    if (typeof downstreamPush !== 'function') return queue;
-
-    function hookedPush(...chunks) {
-      for (const chunk of chunks) patchChunk(chunk);
-      return Reflect.apply(downstreamPush, this, chunks);
+    function makePushHook(downstreamPush) {
+      return function hookedPush(...chunks) {
+        for (const chunk of chunks) patchChunk(chunk);
+        return Reflect.apply(downstreamPush, this, chunks);
+      };
     }
+
+    if (typeof queue.push !== 'function') return queue;
+
+    let hookedPush = makePushHook(queue.push);
 
     const pushDescriptor = Object.getOwnPropertyDescriptor(queue, 'push');
 
@@ -134,7 +143,7 @@ function installHotUpdateBlocker() {
         },
         set(nextPush) {
           if (typeof nextPush === 'function' && nextPush !== hookedPush) {
-            downstreamPush = nextPush;
+            hookedPush = makePushHook(nextPush);
           }
         },
       });

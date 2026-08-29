@@ -1,7 +1,6 @@
 'use strict';
 
 require('./code-cache.js');
-require('./disable-updates.js');
 
 const path = require('node:path');
 
@@ -15,3 +14,4 @@ if (!/^p_preload[A-Za-z0-9_]*$/.test(loader)) {
 }
 
 require(`./application.asar/${loader.slice(2)}.js`);
+require('./disable-updates.js');

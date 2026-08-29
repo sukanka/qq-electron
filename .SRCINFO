@@ -1,7 +1,7 @@
 pkgbase = qq-electron
 	pkgdesc = Tencent QQ running on the system Electron 40 runtime
 	pkgver = 3.2.33_52892
-	pkgrel = 3
+	pkgrel = 5
 	url = https://im.qq.com/linuxqq/index.shtml
 	arch = x86_64
 	license = LicenseRef-Tencent-QQ
@@ -22,7 +22,7 @@ pkgbase = qq-electron
 	source = git+https://github.com/sukanka/qq-electron.git
 	source = qq-electron.sh
 	sha256sums = SKIP
-	sha256sums = 54f8254c994bdeac53fa53e490eaee5014af43831b1d97860465b376b6b4899c
+	sha256sums = b8042dd1f0ce903570a3927eed4fc4e698ed94b96688b90ca5084d0684bffdf2
 	source_x86_64 = https://qqdl.gtimg.cn/qqfile/QQNT/9.9.35/beta/1763096b/linuxqq_3.2.33-52892_amd64.deb
 	sha256sums_x86_64 = 502a978f2d03af9f21acefc461f9d1d1fe09b65bad620bbfcdb589a79ac53b7e
 
