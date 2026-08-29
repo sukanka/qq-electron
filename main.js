@@ -157,7 +157,9 @@ electron.app.enableSandbox = () => {
 
 // QQ's image viewer fetches original images through appimg://, and its video
 // viewer streams local videos through the same scheme. Current Electron
-// releases require both privileges to be declared explicitly.
+// releases require these privileges to be declared explicitly. Chromium's
+// media pipeline also needs standard URL parsing to reopen a local video at a
+// later byte range; without it, MP4 files with a trailing moov atom fail.
 const originalRegisterSchemesAsPrivileged =
   electron.protocol.registerSchemesAsPrivileged.bind(electron.protocol);
 
@@ -170,6 +172,7 @@ electron.protocol.registerSchemesAsPrivileged = (schemes) => (
         privileges: {
           ...scheme.privileges,
           corsEnabled: true,
+          standard: true,
           stream: true,
         },
       }
