@@ -134,19 +134,12 @@ const webContentsProxies = new WeakMap();
 const sessionModuleProxies = new WeakMap();
 const wrappedSessions = new WeakSet();
 
-const appProxy = new Proxy(electron.app, {
-  get(target, property) {
-    if (property === 'enableSandbox') {
-      return () => {
-        console.warn(
-          '[linuxqq-system-electron] ignored app.enableSandbox(); '
-          + 'QQ preload compatibility requires per-window sandbox:false',
-        );
-      };
-    }
-    return Reflect.get(target, property, target);
-  },
-});
+electron.app.enableSandbox = () => {
+  console.warn(
+    '[linuxqq-system-electron] ignored app.enableSandbox(); '
+    + 'QQ preload compatibility requires per-window sandbox:false',
+  );
+};
 
 function wrapConstructor(Constructor) {
   if (typeof Constructor !== 'function') return Constructor;
@@ -306,7 +299,6 @@ function wrapElectronExports(exports) {
   const proxy = new Proxy(exports, {
     get(target, property) {
       const value = Reflect.get(target, property, target);
-      if (property === 'app') return appProxy;
       if (property === 'session') return wrapSessionModule(value);
       if (property === 'webContents') return wrapWebContentsModule(value);
       return constructorNames.has(property) ? wrapConstructor(value) : value;

@@ -5,3 +5,4 @@ linuxqq*.pkg.tar.zst
 linuxqq_*/*
 qq-electron/*
 *.zst
+*.log
