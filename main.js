@@ -5,16 +5,27 @@ require('./code-cache.js');
 const Module = require('node:module');
 const fs = require('node:fs');
 const path = require('node:path');
+const originalFs = require('original-fs');
 
 const originalLoad = Module._load;
 const electron = originalLoad.call(Module, 'electron', module, false);
 const appRoot = __dirname;
+const applicationAsar = path.join(appRoot, 'application.asar');
 const packageInfo = require('./package.json');
 const qqDataRoot = path.join(electron.app.getPath('appData'), 'QQ');
 const versionsRoot = path.join(qqDataRoot, 'versions');
 const preloadDispatcher = path.join(appRoot, 'preload.js');
 const preloadArgument = '--linuxqq-system-preload=';
 const sessionPreloadPrefix = 'session-preload-';
+
+// Electron's ASAR-aware fs treats the archive as a virtual directory here.
+// QQ's launcher needs to test whether the physical archive itself exists.
+const electronAccessSync = fs.accessSync;
+fs.accessSync = function systemElectronAccessSync(target, ...args) {
+  return target === applicationAsar
+    ? originalFs.accessSync(target, ...args)
+    : electronAccessSync(target, ...args);
+};
 
 function loaderForPreload(preload) {
   const name = path.basename(preload, '.js');

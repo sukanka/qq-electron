@@ -6,13 +6,13 @@ _md5=1763096b
 _electron=electron40
 pkgname=qq-electron
 pkgver="${_base_pkgver//-/_}"
-pkgrel=1
+pkgrel=2
 pkgdesc='Tencent QQ running on the system Electron 40 runtime'
 arch=('x86_64')
 url='https://im.qq.com/linuxqq/index.shtml'
 license=('LicenseRef-Tencent-QQ')
 depends=($_electron)
-makedepends=('git')
+makedepends=('asar' 'git')
 optdepends=(
 	'gjs: GNOME Wayland screenshot support'
 	'libappindicator-gtk3: system tray icon support'
@@ -37,6 +37,9 @@ prepare() {
 	rm -rf -- "${source_root}"
 	install -d "${source_root}"
 	tar --no-same-owner -xJf "${srcdir}/data.tar.xz" -C "${source_root}"
+	node "${srcdir}/qq-electron/scripts/decrypt-application.js" \
+		"${source_root}/opt/QQ/resources/app/application.asar" \
+		"${source_root}/opt/QQ/qq"
 
 	cd "${source_root}"
 	sed -i opt/QQ/resources/app/package.json \
