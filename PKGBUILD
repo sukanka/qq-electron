@@ -6,7 +6,7 @@ _md5=1763096b
 _electron=electron40
 pkgname=qq-electron
 pkgver="${_base_pkgver//-/_}"
-pkgrel=12
+pkgrel=13
 pkgdesc='Tencent QQ running on the system Electron 40 runtime'
 arch=('x86_64')
 url='https://im.qq.com/linuxqq/index.shtml'
@@ -19,7 +19,6 @@ optdepends=(
 )
 provides=('qq' 'linuxqq')
 conflicts=('linuxqq' 'linuxqq-nt-bwrap')
-options=('!emptydirs' '!strip')
 
 _url_prefix="https://qqdl.gtimg.cn/qqfile/QQNT/${_nt_ver}/beta/${_md5}"
 source_x86_64=("${_url_prefix}/linuxqq_${_base_pkgver}_amd64.deb")

@@ -147,6 +147,7 @@ const exportsProxies = new WeakMap();
 const webContentsProxies = new WeakMap();
 const sessionModuleProxies = new WeakMap();
 const wrappedSessions = new WeakSet();
+const wrappedProtocols = new WeakSet();
 
 electron.app.enableSandbox = () => {
   console.warn(
@@ -180,6 +181,65 @@ electron.protocol.registerSchemesAsPrivileged = (schemes) => (
     )) : schemes,
   )
 );
+
+// Registering appimg as a standard scheme is required for Chromium to treat
+// separate video Range requests as the same origin. That registration also
+// canonicalizes appimg:///home/... to appimg://home/... before the legacy QQ
+// file handler sees it. QQ expects the original hostless form when resolving
+// absolute paths, so restore only that spelling for the handler. Keep the
+// canonical URL in Chromium itself, where its stable origin is needed.
+function restoreLegacyAppimgRequest(request) {
+  if (!request || typeof request !== 'object' || typeof request.url !== 'string') {
+    return request;
+  }
+
+  const url = request.url.replace(
+    /^appimg:\/\/(?=[^/?#])/i,
+    'appimg:///',
+  );
+  return url === request.url ? request : { ...request, url };
+}
+
+function wrapProtocol(protocolModule) {
+  if (
+    !protocolModule
+    || typeof protocolModule !== 'object'
+    || wrappedProtocols.has(protocolModule)
+  ) {
+    return protocolModule;
+  }
+
+  const originalRegisterFileProtocol = protocolModule.registerFileProtocol;
+  if (typeof originalRegisterFileProtocol === 'function') {
+    protocolModule.registerFileProtocol = function systemElectronRegisterFileProtocol(
+      scheme,
+      handler,
+      ...args
+    ) {
+      const effectiveHandler = (
+        typeof scheme === 'string'
+        && scheme.toLowerCase() === 'appimg'
+        && typeof handler === 'function'
+      )
+        ? function legacyAppimgHandler(request, callback) {
+          return Reflect.apply(handler, this, [
+            restoreLegacyAppimgRequest(request),
+            callback,
+          ]);
+        }
+        : handler;
+
+      return Reflect.apply(originalRegisterFileProtocol, protocolModule, [
+        scheme,
+        effectiveHandler,
+        ...args,
+      ]);
+    };
+  }
+
+  wrappedProtocols.add(protocolModule);
+  return protocolModule;
+}
 
 function wrapConstructor(Constructor) {
   if (typeof Constructor !== 'function') return Constructor;
@@ -222,9 +282,12 @@ function wrapWebContentsModule(webContents) {
 }
 
 function wrapSession(session) {
-  if (!session || typeof session !== 'object' || wrappedSessions.has(session)) {
+  if (!session || typeof session !== 'object') {
     return session;
   }
+
+  wrapProtocol(session.protocol);
+  if (wrappedSessions.has(session)) return session;
 
   const originalPaths = new Map();
   const rememberPath = (originalPath, rewrittenPath) => {
@@ -339,6 +402,7 @@ function wrapElectronExports(exports) {
   const proxy = new Proxy(exports, {
     get(target, property) {
       const value = Reflect.get(target, property, target);
+      if (property === 'protocol') return wrapProtocol(value);
       if (property === 'session') return wrapSessionModule(value);
       if (property === 'webContents') return wrapWebContentsModule(value);
       return constructorNames.has(property) ? wrapConstructor(value) : value;
@@ -381,5 +445,6 @@ electron.app.on('web-contents-created', (_event, contents) => {
   });
 });
 
+wrapProtocol(electron.protocol);
 pinPackagedVersion();
 require('./app_launcher/index.js');
