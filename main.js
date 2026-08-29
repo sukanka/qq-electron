@@ -155,6 +155,24 @@ electron.app.enableSandbox = () => {
   );
 };
 
+// QQ's image viewer fetches original images through appimg://. Current
+// Electron releases require that scheme to be explicitly CORS-enabled.
+const originalRegisterSchemesAsPrivileged =
+  electron.protocol.registerSchemesAsPrivileged.bind(electron.protocol);
+
+electron.protocol.registerSchemesAsPrivileged = (schemes) => (
+  originalRegisterSchemesAsPrivileged(
+    Array.isArray(schemes) ? schemes.map((scheme) => (
+      scheme?.scheme === 'appimg'
+      ? {
+        ...scheme,
+        privileges: { ...scheme.privileges, corsEnabled: true },
+      }
+      : scheme
+    )) : schemes,
+  )
+);
+
 function wrapConstructor(Constructor) {
   if (typeof Constructor !== 'function') return Constructor;
   if (constructorProxies.has(Constructor)) return constructorProxies.get(Constructor);
