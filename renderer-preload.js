@@ -1,39 +1,46 @@
 'use strict';
 
+const contextBridgePatched = Symbol.for(
+  'qq-electron.context-bridge-patched',
+);
+
+function exposeInCurrentWorld(key, api) {
+  if (typeof key !== 'string' || !key) {
+    throw new TypeError('contextBridge key must be a non-empty string');
+  }
+  if (Object.prototype.hasOwnProperty.call(globalThis, key)) {
+    throw new Error(`Cannot bind an existing global: ${key}`);
+  }
+
+  Object.defineProperty(globalThis, key, {
+    configurable: false,
+    enumerable: true,
+    value: api,
+    writable: false,
+  });
+}
+
+function installContextBridgeCompatibility() {
+  if (process.contextIsolated || globalThis[contextBridgePatched]) return;
+
+  const { contextBridge } = require('electron');
+
+  // In a shared renderer world these APIs can expose values directly. QQ's
+  // encrypted preload still calls contextBridge even after checking that
+  // context isolation is disabled.
+  contextBridge.exposeInMainWorld = exposeInCurrentWorld;
+
+  Object.defineProperty(globalThis, contextBridgePatched, { value: true });
+}
+
 module.exports = function loadRendererPreload(loader) {
-  const preloadPath = require.resolve(
-    `./application.asar/${loader.slice(2)}.js`,
-  );
-  let preloadModule;
-
-  // Tencent's plaintext preload normally exposes this bridge through an
-  // isolated world. QQ windows use a shared world here so encrypted renderer
-  // chunks can fall back to vm.Script.runInThisContext().
-  if (!process.contextIsolated && typeof globalThis.electron?.load !== 'function') {
-    const major = require('./major.node');
-    const electronBridge = Object.freeze({
-      load(file) {
-        if (!preloadModule) {
-          throw new Error('QQ renderer preload has not finished loading');
-        }
-        return major.load(file, preloadModule);
-      },
-    });
-
-    Object.defineProperty(globalThis, 'electron', {
-      configurable: false,
-      enumerable: true,
-      value: electronBridge,
-      writable: false,
-    });
+  // QQ windows use a shared world so encrypted renderer chunks can fall back
+  // to vm.Script.runInThisContext(). Adapt the original preload's bridge calls
+  // to that same world before loading it.
+  if (!process.contextIsolated) {
+    installContextBridgeCompatibility();
   }
 
-  require(preloadPath);
-  preloadModule = require.cache[preloadPath];
-
-  if (!preloadModule) {
-    throw new Error(`Unable to find loaded QQ preload module: ${preloadPath}`);
-  }
-
+  require(`./application.asar/${loader.slice(2)}.js`);
   require('./disable-updates.js');
 };
