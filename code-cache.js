@@ -55,6 +55,15 @@ if (!vm.Script[patched]) {
         );
       }
     }
+
+    // Tencent's Electron adds this method for encrypted renderer chunks.
+    // With context isolation disabled for QQ windows, the current context is
+    // the renderer main world that the original method would select.
+    runInMainContext(options) {
+      const run = OriginalScript.prototype.runInMainContext
+        || OriginalScript.prototype.runInThisContext;
+      return Reflect.apply(run, this, [options]);
+    }
   }
 
   Object.defineProperty(CompatibleScript, patched, { value: true });

@@ -22,6 +22,7 @@ QQ 的版本更新应通过重新构建和升级 AUR 软件包完成。
 - `main.js`：系统 Electron 入口及主要兼容逻辑。
 - `preload.js`：普通窗口的 preload 分发入口。
 - `session-preload.js`：Session preload 的共用入口；打包时会为 QQ 需要的文件名创建硬链接。
+- `renderer-preload.js`：加载 QQ 原始 preload，并补充 renderer 字节码加载入口。
 - `code-cache.js`：`resourcesPath` 和 V8 code cache 兼容处理。
 - `disable-updates.js`：阻止 QQ 热更新检查。
 - `scripts/decrypt-application.js`：在构建阶段解密并重新封装 `application.asar`。
@@ -36,5 +37,7 @@ QQ 的版本更新应通过重新构建和升级 AUR 软件包完成。
 ## 风险提示
 
 本仓库中的所有 JavaScript 代码均由 GPT-5.6 Sol 生成，没有任何人工编写或添加。代码可能存在尚未发现的问题，请自行审查并承担使用风险（use at your own risk）。
+
+为兼容腾讯 Electron 独有的 `runInMainContext()`，QQ 窗口会关闭 Electron 的 context isolation。页面代码与 preload 因而共享同一 JavaScript 上下文，请仅运行可信的官方 QQ 资源。
 
 本项目是非官方兼容方案，与腾讯及 Electron 项目无关。

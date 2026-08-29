@@ -99,7 +99,10 @@ function rewriteWebPreferences(webPreferences) {
   // Session preloads apply even to windows which do not specify their own
   // preload. Upstream Electron's sandbox preload does not expose QQ's private
   // native bridge, so every QQ-created webContents must use a Node preload.
+  // QQ's encrypted renderer chunks also rely on Tencent's runInMainContext(),
+  // which is emulated with runInThisContext() by code-cache.js.
   webPreferences.sandbox = false;
+  webPreferences.contextIsolation = false;
 
   if (typeof webPreferences.preload !== 'string') return;
 

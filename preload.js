@@ -18,6 +18,5 @@ if (!isKnownLoader) {
 if (loader === 'internal_launcher') {
   require('./app_launcher/launcher.js');
 } else {
-  require(`./application.asar/${loader.slice(2)}.js`);
-  require('./disable-updates.js');
+  require('./renderer-preload.js')(loader);
 }
