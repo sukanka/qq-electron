@@ -1,6 +1,7 @@
 'use strict';
 
 require('./code-cache.js');
+require('./disable-updates.js');
 
 const argumentPrefix = '--linuxqq-system-preload=';
 

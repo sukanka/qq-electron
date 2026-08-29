@@ -73,6 +73,7 @@ package() {
 		"${pkgdir}/opt/QQ/libqq-electron-compat.so"
 	install -Dm644 \
 		"${repo_dir}/code-cache.js" \
+		"${repo_dir}/disable-updates.js" \
 		"${repo_dir}/main.js" \
 		"${repo_dir}/preload.js" \
 		"${repo_dir}/session-preload.js" \
