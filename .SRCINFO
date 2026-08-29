@@ -1,13 +1,16 @@
 pkgbase = qq-electron
 	pkgdesc = Tencent QQ running on the system Electron 40 runtime
 	pkgver = 3.2.33_52892
-	pkgrel = 2
+	pkgrel = 3
 	url = https://im.qq.com/linuxqq/index.shtml
 	arch = x86_64
 	license = LicenseRef-Tencent-QQ
 	makedepends = asar
 	makedepends = git
 	depends = electron40
+	depends = libssh2
+	depends = libunwind
+	depends = libvips
 	optdepends = gjs: GNOME Wayland screenshot support
 	optdepends = libappindicator-gtk3: system tray icon support
 	provides = qq

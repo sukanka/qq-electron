@@ -6,12 +6,12 @@ _md5=1763096b
 _electron=electron40
 pkgname=qq-electron
 pkgver="${_base_pkgver//-/_}"
-pkgrel=2
+pkgrel=3
 pkgdesc='Tencent QQ running on the system Electron 40 runtime'
 arch=('x86_64')
 url='https://im.qq.com/linuxqq/index.shtml'
 license=('LicenseRef-Tencent-QQ')
-depends=($_electron)
+depends=($_electron libssh2 libunwind libvips)
 makedepends=('asar' 'git')
 optdepends=(
 	'gjs: GNOME Wayland screenshot support'
@@ -28,7 +28,7 @@ source=(
 	'qq-electron.sh'
 )
 sha256sums=('SKIP'
-            '54f8254c994bdeac53fa53e490eaee5014af43831b1d97860465b376b6b4899c')
+	'54f8254c994bdeac53fa53e490eaee5014af43831b1d97860465b376b6b4899c')
 sha256sums_x86_64=('502a978f2d03af9f21acefc461f9d1d1fe09b65bad620bbfcdb589a79ac53b7e')
 
 prepare() {
@@ -40,6 +40,7 @@ prepare() {
 	node "${srcdir}/qq-electron/scripts/decrypt-application.js" \
 		"${source_root}/opt/QQ/resources/app/application.asar" \
 		"${source_root}/opt/QQ/qq"
+	rm -f "${source_root}/opt/QQ/resources/app"/{libssh2.so.1,avsdk/bugly/libssh2.so.1,libunwind{,-x86_64}.so.8,avsdk/bugly/libunwind{,-x86_64}.so.8,sharp-lib/libvips-cpp.so.42}
 
 	cd "${source_root}"
 	sed -i opt/QQ/resources/app/package.json \
@@ -52,11 +53,11 @@ prepare() {
 }
 
 build() {
-	cc ${CPPFLAGS} ${CFLAGS} -fPIC -shared \
+	cc $(pkg-config --cflags vips) ${CPPFLAGS} ${CFLAGS} -fPIC -shared \
 		-Wl,-soname,libqq-electron-compat.so \
 		-o "${srcdir}/libqq-electron-compat.so" \
 		"${srcdir}/qq-electron/electron-compat.c" \
-		${LDFLAGS} -ldl
+		${LDFLAGS} $(pkg-config --libs vips) -ldl
 }
 
 _hack_preloaders() {

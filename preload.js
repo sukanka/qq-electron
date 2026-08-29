@@ -16,4 +16,8 @@ if (!isKnownLoader) {
   throw new Error(`Unknown Linux QQ preload bridge: ${loader || '<missing>'}`);
 }
 
-require('./major.node').load(loader, module);
+if (loader === 'internal_launcher') {
+  require('./app_launcher/launcher.js');
+} else {
+  require(`./application.asar/${loader.slice(2)}.js`);
+}

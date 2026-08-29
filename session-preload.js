@@ -14,4 +14,4 @@ if (!/^p_preload[A-Za-z0-9_]*$/.test(loader)) {
   throw new Error(`Unknown Linux QQ session preload bridge: ${loader || '<missing>'}`);
 }
 
-require('./major.node').load(loader, module);
+require(`./application.asar/${loader.slice(2)}.js`);
