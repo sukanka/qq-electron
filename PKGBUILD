@@ -23,8 +23,12 @@ options=('!emptydirs' '!strip')
 
 _url_prefix="https://qqdl.gtimg.cn/qqfile/QQNT/${_nt_ver}/beta/${_md5}"
 source_x86_64=("${_url_prefix}/linuxqq_${_base_pkgver}_amd64.deb")
-source=('git+https://github.com/sukanka/qq-electron.git')
-sha256sums=('SKIP')
+source=(
+	'git+https://github.com/sukanka/qq-electron.git'
+	'qq-electron.sh'
+)
+sha256sums=('SKIP'
+            '54f8254c994bdeac53fa53e490eaee5014af43831b1d97860465b376b6b4899c')
 sha256sums_x86_64=('502a978f2d03af9f21acefc461f9d1d1fe09b65bad620bbfcdb589a79ac53b7e')
 
 prepare() {
@@ -34,13 +38,14 @@ prepare() {
 	install -d "${source_root}"
 	tar --no-same-owner -xJf "${srcdir}/data.tar.xz" -C "${source_root}"
 
-	sed -i \
-		's|"main": "./application.asar/app_launcher/index.js"|"main": "./main.js"|' \
-		"${source_root}/opt/QQ/resources/app/package.json"
-	grep -q '"main": "./main.js"' \
-		"${source_root}/opt/QQ/resources/app/package.json"
-	sed -i 's|^Icon=.*|Icon=qq|' \
-		"${source_root}/usr/share/applications/qq.desktop"
+	cd "${source_root}"
+	sed -i opt/QQ/resources/app/package.json \
+		-e 's|"main": "./application.asar/app_launcher/index.js"|"main": "./main.js"|'
+
+	sed -i usr/share/applications/qq.desktop \
+		-e 's|^Exec=.*|Exec=/usr/bin/qq %U|' -e 's|^Icon=.*|Icon=qq|'
+	sed -i ${srcdir}/qq-electron.sh -e "s|__ELECTRON__|${_electron}|"
+
 }
 
 build() {
@@ -51,45 +56,44 @@ build() {
 		${LDFLAGS} -ldl
 }
 
-package() {
-	local repo_dir="${srcdir}/qq-electron"
-	local source_root="${srcdir}/linuxqq-root"
+_hack_preloaders() {
 
-	install -d "${pkgdir}/opt/QQ/resources"
-	cp -ar "${source_root}/opt/QQ/resources/app" \
-		"${pkgdir}/opt/QQ/resources/"
-	install -Dm644 \
-		"${source_root}/opt/QQ/version.json" \
-		-t "${pkgdir}/opt/QQ"
-	install -Dm644 "${source_root}/usr/share/applications/qq.desktop" \
-		"${pkgdir}/usr/share/applications/qq.desktop"
-	install -Dm644 "${source_root}/usr/share/icons/hicolor/512x512/apps/qq.png" \
-		"${pkgdir}/usr/share/icons/hicolor/512x512/apps/qq.png"
-	install -Dm644 "${source_root}/usr/share/doc/linuxqq/changelog.gz" \
-		"${pkgdir}/usr/share/doc/${pkgname}/changelog.gz"
-
-	install -Dm755 "${repo_dir}/qq-electron.sh" "${pkgdir}/opt/QQ/qq"
-	install -Dm755 "${srcdir}/libqq-electron-compat.so" \
-		"${pkgdir}/opt/QQ/libqq-electron-compat.so"
-	install -Dm644 \
-		"${repo_dir}/code-cache.js" \
-		"${repo_dir}/disable-updates.js" \
-		"${repo_dir}/main.js" \
-		"${repo_dir}/preload.js" \
-		"${repo_dir}/session-preload.js" \
-		-t "${pkgdir}/opt/QQ/resources/app"
-
-	local preload_loader
-	for preload_loader in \
-		p_preload p_preloadAux p_preload_browserview p_preload_chatwin \
-		p_preload_ex_browser p_preload_ex p_preload_login \
-		p_preload_qq_browser_base p_preload_qq_browser_mixed \
-		p_preload_qq_browser_simple p_preload_qzone_view p_preload_simple \
-		p_preload_webview; do
-		ln "${pkgdir}/opt/QQ/resources/app/session-preload.js" \
-			"${pkgdir}/opt/QQ/resources/app/session-preload-${preload_loader}.js"
+	pushd ${pkgdir}/usr/lib/qq/resources/app/
+	local preload_loader _preloaders
+	_preloaders=(
+		""
+		Aux
+		_browserview
+		_chatwin
+		_ex_browser
+		_ex
+		_login
+		_qq_browser_base
+		_qq_browser_mixed
+		_qq_browser_simple
+		_qzone_view
+		_simple
+		_webview
+	)
+	for preload_loader in "${_preloaders[@]}"; do
+		ln session-preload.js "session-preload-p_preload${preload_loader}.js"
 	done
+	popd
+}
 
-	install -d "${pkgdir}/usr/bin"
-	ln -s /opt/QQ/qq "${pkgdir}/usr/bin/qq"
+package() {
+
+	cd "${srcdir}/linuxqq-root"
+
+	install -d "${pkgdir}/usr/lib/qq/resources"
+	cp -ar "opt/QQ/resources/app" "${pkgdir}/usr/lib/qq/resources/"
+	cp -ar usr/share ${pkgdir}/usr/share
+	install -Dm644 "opt/QQ/version.json" -t "${pkgdir}/usr/lib/qq"
+	install -Dm755 "${srcdir}/libqq-electron-compat.so" -t "${pkgdir}/usr/lib/qq"
+	install -Dm755 "${srcdir}/qq-electron.sh" "${pkgdir}/usr/bin/qq"
+
+	cd ${srcdir}/qq-electron
+	install -Dm644 *.js -t "${pkgdir}/usr/lib/qq/resources/app"
+
+	_hack_preloaders
 }
