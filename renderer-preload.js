@@ -1,7 +1,7 @@
 'use strict';
 
-const contextBridgePatched = Symbol.for(
-  'qq-electron.context-bridge-patched',
+const sharedWorldPatched = Symbol.for(
+  'qq-electron.shared-renderer-patched',
 );
 
 function exposeInCurrentWorld(key, api) {
@@ -20,17 +20,33 @@ function exposeInCurrentWorld(key, api) {
   });
 }
 
-function installContextBridgeCompatibility() {
-  if (process.contextIsolated || globalThis[contextBridgePatched]) return;
+function installSharedWorldCompatibility() {
+  if (process.contextIsolated || globalThis[sharedWorldPatched]) return;
 
   const { contextBridge } = require('electron');
+  const processProperty = Object.getOwnPropertyDescriptor(globalThis, 'process');
+
+  if (!processProperty) {
+    throw new Error('Electron renderer process global is unavailable');
+  }
 
   // In a shared renderer world these APIs can expose values directly. QQ's
   // encrypted preload still calls contextBridge even after checking that
   // context isolation is disabled.
   contextBridge.exposeInMainWorld = exposeInCurrentWorld;
 
-  Object.defineProperty(globalThis, contextBridgePatched, { value: true });
+  // Electron removes Node globals after non-isolated preloads finish. QQ's
+  // bytecode loader and asynchronous preload callbacks still use process, so
+  // restore only that captured property after Electron's earlier listener.
+  if (globalThis.location?.protocol === 'app:') {
+    process.once('loaded', () => {
+      if (!Object.prototype.hasOwnProperty.call(globalThis, 'process')) {
+        Object.defineProperty(globalThis, 'process', processProperty);
+      }
+    });
+  }
+
+  Object.defineProperty(globalThis, sharedWorldPatched, { value: true });
 }
 
 module.exports = function loadRendererPreload(loader) {
@@ -38,7 +54,7 @@ module.exports = function loadRendererPreload(loader) {
   // to vm.Script.runInThisContext(). Adapt the original preload's bridge calls
   // to that same world before loading it.
   if (!process.contextIsolated) {
-    installContextBridgeCompatibility();
+    installSharedWorldCompatibility();
   }
 
   require(`./application.asar/${loader.slice(2)}.js`);
