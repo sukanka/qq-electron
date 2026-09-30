@@ -1,5 +1,10 @@
 'use strict';
 
+const {
+  installRendererWindowProxy,
+  isCompatibilityWindowProxy,
+} = require('./window-proxy.js');
+
 const sharedWorldPatched = Symbol.for(
   'qq-electron.shared-renderer-patched',
 );
@@ -8,7 +13,12 @@ function exposeInCurrentWorld(key, api) {
   if (typeof key !== 'string' || !key) {
     throw new TypeError('contextBridge key must be a non-empty string');
   }
-  if (Object.prototype.hasOwnProperty.call(globalThis, key)) {
+  const existing = Object.getOwnPropertyDescriptor(globalThis, key);
+  const canReplaceWindowProxy = key === 'proxyInvoke'
+    && typeof api === 'function'
+    && existing?.configurable
+    && isCompatibilityWindowProxy(existing.value);
+  if (existing && !canReplaceWindowProxy) {
     throw new Error(`Cannot bind an existing global: ${key}`);
   }
 
@@ -58,5 +68,12 @@ module.exports = function loadRendererPreload(loader) {
   }
 
   require(`./application.asar/${loader.slice(2)}.js`);
+  if (!process.contextIsolated) {
+    // about:blank auxiliary windows inherit the common preload, which does not
+    // expose the bridge provided by QQ's dedicated Aux preload. Reuse QQ's
+    // existing main-process handler when that renderer entry is missing.
+    const { ipcRenderer } = require('electron');
+    installRendererWindowProxy({ ipcRenderer, globalObject: globalThis });
+  }
   require('./disable-updates.js');
 };

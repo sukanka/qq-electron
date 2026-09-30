@@ -11,6 +11,7 @@
 - 使用 `main.js` 接管应用入口，适配系统 Electron，并继续加载 QQ 原始的 `app_launcher`。
 - 构建时解密 QQ 的 `application.asar`，再封装为系统 Electron 可读取的标准 ASAR。
 - 重定向 QQ 的 preload，使不同窗口共用兼容入口并正确加载 `major.node`。
+- 补齐辅助窗口继承普通 preload 时缺失的 `proxyInvoke`，复用 QQ 原有 IPC 完成窗口操作。
 - 兼容 QQ 自带的 V8 code cache 与系统 Electron 的运行环境。
 - 通过一个小型原生兼容库补充 QQ 所需、上游 Electron 未导出的模块注册符号。
 - 固定到打包安装的 QQ 版本，阻止下载版本覆盖它，并禁用 QQ 的自动更新和热更新检查。
@@ -23,6 +24,7 @@ QQ 的版本更新应通过重新构建和升级 AUR 软件包完成。
 - `preload.js`：普通窗口的 preload 分发入口。
 - `session-preload.js`：Session preload 的共用入口；打包时会为 QQ 需要的文件名创建硬链接。
 - `renderer-preload.js`：加载 QQ 原始 preload，并补充 renderer 字节码加载入口。
+- `window-proxy.js`：补充辅助窗口的 `proxyInvoke`；已有 QQ 原生桥接时保留它。
 - `code-cache.js`：`resourcesPath` 和 V8 code cache 兼容处理。
 - `disable-updates.js`：阻止 QQ 热更新检查。
 - `scripts/decrypt-application.js`：在构建阶段解密并重新封装 `application.asar`。
