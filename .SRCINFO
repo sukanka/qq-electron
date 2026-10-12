@@ -1,7 +1,7 @@
 pkgbase = qq-electron
 	pkgdesc = Tencent QQ running on the system Electron 40 runtime
 	pkgver = 3.2.34_53644
-	pkgrel = 15
+	pkgrel = 16
 	url = https://im.qq.com/linuxqq/index.shtml
 	arch = x86_64
 	license = LicenseRef-Tencent-QQ

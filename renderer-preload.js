@@ -78,4 +78,9 @@ module.exports = function loadRendererPreload(loader) {
     installRendererWindowProxy({ ipcRenderer, globalObject: globalThis });
   }
   require('./disable-updates.js');
+  if (!process.contextIsolated) {
+    require('./miniapp-browser.js').installMiniAppBrowser({
+      shell: require('electron').shell,
+    });
+  }
 };

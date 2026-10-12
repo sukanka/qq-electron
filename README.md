@@ -15,6 +15,7 @@
 - 兼容 QQ 自带的 V8 code cache 与系统 Electron 的运行环境。
 - 通过一个小型原生兼容库补充 QQ 所需、上游 Electron 未导出的模块注册符号。
 - 通过进程内 D-Bus 调用桌面 OpenURI portal 打开外部链接，避免 QQ 原生模块在启动 `xdg-open` 的 fork 回调中崩溃。
+- 点击 Linux 不支持的小程序卡片时，用默认浏览器打开卡片中的网页地址。
 - 固定到打包安装的 QQ 版本，阻止下载版本覆盖它，并禁用 QQ 的自动更新和热更新检查。
 
 QQ 的版本更新应通过重新构建和升级 AUR 软件包完成。
@@ -26,6 +27,8 @@ QQ 的版本更新应通过重新构建和升级 AUR 软件包完成。
 - `session-preload.js`：Session preload 的共用入口；打包时会为 QQ 需要的文件名创建硬链接。
 - `renderer-preload.js`：加载 QQ 原始 preload，并补充 renderer 字节码加载入口。
 - `window-proxy.js`：补充辅助窗口的 `proxyInvoke`；已有 QQ 原生桥接时保留它。
+- `renderer-modules.js`：观察 QQ renderer 模块加载，供兼容补丁共用。
+- `miniapp-browser.js`：将不支持的小程序卡片点击转为浏览器打开。
 - `code-cache.js`：`resourcesPath` 和 V8 code cache 兼容处理。
 - `disable-updates.js`：阻止 QQ 热更新检查。
 - `scripts/decrypt-application.js`：在构建阶段解密并重新封装 `application.asar`。
@@ -46,6 +49,8 @@ QQ 的版本更新应通过重新构建和升级 AUR 软件包完成。
 兼容层保留 `shell.openExternal()` 的 Promise 接口，等待 portal 的 `Response` 后完成；取消、打开失败、服务不可用或超时会拒绝 Promise，不再退回 `xdg-open`。请求不创建辅助进程，也不关闭 Chromium 的 FD 所有权检查。这个改动仅覆盖 `openExternal()`，QQ 其他启动子进程的操作仍可能受到原生 fork 兼容问题影响。
 
 当前请求不附带父窗口标识或 Wayland activation token，浏览器的窗口激活行为由桌面决定。
+
+小程序卡片默认使用与右键“用浏览器打开”相同的卡片地址字段（`qqdocurl`、`url`、`jumpUrl`），选取可用的 HTTP/HTTPS 地址。腾讯文档保留原有桌面打开方式；没有可用网页地址的卡片仍由 QQ 处理。
 
 ## 验证
 
