@@ -14,6 +14,7 @@
 - 补齐辅助窗口继承普通 preload 时缺失的 `proxyInvoke`，复用 QQ 原有 IPC 完成窗口操作。
 - 兼容 QQ 自带的 V8 code cache 与系统 Electron 的运行环境。
 - 通过一个小型原生兼容库补充 QQ 所需、上游 Electron 未导出的模块注册符号。
+- 通过进程内 D-Bus 调用桌面 OpenURI portal 打开外部链接，避免 QQ 原生模块在启动 `xdg-open` 的 fork 回调中崩溃。
 - 固定到打包安装的 QQ 版本，阻止下载版本覆盖它，并禁用 QQ 的自动更新和热更新检查。
 
 QQ 的版本更新应通过重新构建和升级 AUR 软件包完成。
@@ -29,6 +30,8 @@ QQ 的版本更新应通过重新构建和升级 AUR 软件包完成。
 - `disable-updates.js`：阻止 QQ 热更新检查。
 - `scripts/decrypt-application.js`：在构建阶段解密并重新封装 `application.asar`。
 - `electron-compat.c`：原生模块注册符号兼容层。
+- `portal-shell.js`：将主进程和 preload 的 `shell.openExternal()` 接入桌面 portal。
+- `portal-open-uri.c`：使用 Node-API 和 GIO 在进程内发送 portal 请求，异步等待打开结果。
 - `PKGBUILD`：下载官方 QQ、组装文件并构建 Arch Linux 软件包。
 - `qq-electron.sh`：软件包启动脚本。
 
@@ -36,9 +39,21 @@ QQ 的版本更新应通过重新构建和升级 AUR 软件包完成。
 
 提交到 AUR 时，`PKGBUILD` 和 `qq-electron.sh` 放在同一目录。`qq-electron.sh` 作为本地 source 由 `makepkg` 复制到 `${srcdir}`；其余兼容代码由 `PKGBUILD` 中的 GitHub source 获取。
 
+## 外部链接
+
+打开外部链接需要运行中的用户会话 D-Bus、`xdg-desktop-portal` 以及支持 OpenURI 的桌面后端。桌面未提供相应后端时，可安装 `xdg-desktop-portal-gtk` 并按桌面配置启用。
+
+兼容层保留 `shell.openExternal()` 的 Promise 接口，等待 portal 的 `Response` 后完成；取消、打开失败、服务不可用或超时会拒绝 Promise，不再退回 `xdg-open`。请求不创建辅助进程，也不关闭 Chromium 的 FD 所有权检查。这个改动仅覆盖 `openExternal()`，QQ 其他启动子进程的操作仍可能受到原生 fork 兼容问题影响。
+
+当前请求不附带父窗口标识或 Wayland activation token，浏览器的窗口激活行为由桌面决定。
+
+## 验证
+
+JavaScript 测试使用 `node --test tests/*.test.js`。`bash tests/portal-integration.sh` 会编译原生模块，并在隔离的 D-Bus 会话中验证 portal 请求及不执行 fork 的约束，不会打开真实浏览器；需要 C 编译器、Node.js 开发头文件、GIO、D-Bus、Python 和 PyGObject，安装 Electron 40 时也会验证其 Node 运行模式和真实主进程中的 `shell.openExternal()` 接入。
+
 ## 风险提示
 
-本仓库中的所有 JavaScript 代码均由 GPT-5.6 Sol 生成，没有任何人工编写或添加。代码可能存在尚未发现的问题，请自行审查并承担使用风险（use at your own risk）。
+本仓库中的 JavaScript 兼容代码由 AI 生成，没有任何人工编写或添加。代码可能存在尚未发现的问题，请自行审查并承担使用风险（use at your own risk）。
 
 为兼容腾讯 Electron 独有的 `runInMainContext()`，QQ 窗口会关闭 Electron 的 context isolation。页面代码与 preload 因而共享同一 JavaScript 上下文，请仅运行可信的官方 QQ 资源。
 

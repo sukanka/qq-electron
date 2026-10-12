@@ -1,5 +1,7 @@
 'use strict';
 
+require('./portal-shell.js').installPortalShell(require('electron').shell);
+
 const {
   installRendererWindowProxy,
   isCompatibilityWindowProxy,

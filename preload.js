@@ -16,6 +16,7 @@ if (!isKnownLoader) {
 }
 
 if (loader === 'internal_launcher') {
+  require('./portal-shell.js').installPortalShell(require('electron').shell);
   require('./app_launcher/launcher.js');
 } else {
   require('./renderer-preload.js')(loader);

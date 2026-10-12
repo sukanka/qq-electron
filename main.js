@@ -9,6 +9,7 @@ const originalFs = require('original-fs');
 
 const originalLoad = Module._load;
 const electron = originalLoad.call(Module, 'electron', module, false);
+require('./portal-shell.js').installPortalShell(electron.shell);
 const appRoot = __dirname;
 const applicationAsar = path.join(appRoot, 'application.asar');
 const packageInfo = require('./package.json');

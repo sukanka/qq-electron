@@ -6,16 +6,17 @@ _md5=9ee04bef
 _electron=electron40
 pkgname=qq-electron
 pkgver="${_base_pkgver//-/_}"
-pkgrel=14
+pkgrel=15
 pkgdesc='Tencent QQ running on the system Electron 40 runtime'
 arch=('x86_64')
 url='https://im.qq.com/linuxqq/index.shtml'
 license=('LicenseRef-Tencent-QQ')
-depends=($_electron libssh2 libunwind)
-makedepends=('asar' 'git')
+depends=($_electron libssh2 libunwind glib2 xdg-desktop-portal)
+makedepends=('asar' 'git' 'nodejs')
 optdepends=(
     'gjs: GNOME Wayland screenshot support'
     'libappindicator-gtk3: system tray icon support'
+    'xdg-desktop-portal-gtk: OpenURI portal backend if the desktop does not provide one'
 )
 provides=('qq' 'linuxqq')
 conflicts=('linuxqq' 'linuxqq-nt-bwrap')
@@ -57,6 +58,12 @@ build() {
         -o "${srcdir}/libelectron-compat.so" \
         "${srcdir}/qq-electron/electron-compat.c" \
         ${LDFLAGS} -ldl
+
+    cc ${CPPFLAGS} ${CFLAGS} -fPIC -shared -DNAPI_VERSION=8 \
+        -I/usr/include/node $(pkg-config --cflags gio-unix-2.0) \
+        -o "${srcdir}/portal-open-uri.node" \
+        "${srcdir}/qq-electron/portal-open-uri.c" \
+        ${LDFLAGS} $(pkg-config --libs gio-unix-2.0)
 }
 
 _hack_preloaders() {
@@ -94,6 +101,7 @@ package() {
     cp -ar usr/share ${pkgdir}/usr/share
     install -Dm644 "opt/QQ/version.json" -t "${pkgdir}/usr/lib/QQ"
     install -Dm755 "${srcdir}/libelectron-compat.so" -t "${pkgdir}/usr/lib/QQ"
+    install -Dm755 "${srcdir}/portal-open-uri.node" -t "${pkgdir}/usr/lib/QQ/resources/app"
     install -Dm755 "${srcdir}/qq-electron.sh" "${pkgdir}/usr/bin/qq"
 
     cd ${srcdir}/qq-electron
