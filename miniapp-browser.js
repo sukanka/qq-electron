@@ -2,63 +2,46 @@
 
 const { observeRendererModules } = require('./renderer-modules.js');
 
-function webURL(value) {
-  if (typeof value !== 'string' || !/^https?:\/\//i.test(value)
-    || /[\u0000-\u001f\u007f]/.test(value)) return null;
-
-  try {
-    const url = new URL(value);
-    return url.hostname ? value : null;
-  } catch {
-    return null;
-  }
-}
-
-function cardBrowserURL(card) {
-  // These are the fields used by QQ's "用浏览器打开" menu. detail_1 takes
-  // precedence over miniapp, even when both are present in the same card.
-  const detail = card?.meta?.detail_1 ?? card?.meta?.miniapp;
-  if (!detail || typeof detail !== 'object') return null;
-  return webURL(detail.qqdocurl) || webURL(detail.url) || webURL(detail.jumpUrl);
-}
-
-function getMiniAppBrowserURL(clickArkInfo) {
-  const direct = cardBrowserURL(clickArkInfo);
-  if (direct) return direct;
-
-  // Some Ark routes keep only the message record on the click context.
-  const elements = clickArkInfo?.msgRecord?.elements;
-  if (!Array.isArray(elements)) return null;
-  for (const element of elements) {
-    const data = element?.arkElement?.bytesData;
-    if (typeof data !== 'string') continue;
-    try {
-      const url = cardBrowserURL(JSON.parse(data));
-      if (url) return url;
-    } catch {
-      // Malformed or unavailable card data should keep QQ's original action.
-    }
-  }
-  return null;
-}
-
-function installMiniAppBrowser({ shell, globalObject = globalThis }) {
+function installMiniAppBrowser({ globalObject = globalThis, platform = process.platform } = {}) {
   const installed = Symbol.for('qq-electron.miniapp-browser');
-  if (globalObject[installed]) return false;
-  if (typeof shell?.openExternal !== 'function') {
-    throw new TypeError('Mini-app browser fallback requires shell.openExternal');
-  }
+  if (platform !== 'linux' || globalObject[installed]) return false;
 
   const patchedTargets = new WeakSet();
+  const browserMenus = new WeakMap();
 
-  function patchCandidate(candidate) {
-    if (typeof candidate !== 'function') return;
+  function loadBrowserMenu(requireModule) {
+    if (!browserMenus.has(requireModule)) {
+      // QQ 3.2.34-53644: the browser menu lives in chunk 453; its menu-type
+      // enum lives in 87189. Neither is necessarily loaded before a right click.
+      // Reuse the original handler, including its URL extraction and opening
+      // service, rather than interpreting the rewritten Ark click metadata.
+      const loading = Promise.all([
+        requireModule.e(87189),
+        requireModule.e(453),
+      ]).then(() => {
+        const menu = requireModule(26643)?.Z;
+        if (menu?.text !== '用浏览器打开' || menu.icon !== 'Link'
+          || typeof menu.handler !== 'function' || typeof menu.when !== 'function') {
+          throw new Error('QQ browser context-menu implementation is unavailable');
+        }
+        return menu;
+      }).catch((error) => {
+        browserMenus.delete(requireModule);
+        throw error;
+      });
+      browserMenus.set(requireModule, loading);
+    }
+    return browserMenus.get(requireModule);
+  }
+
+  function patchCandidate(candidate, requireModule) {
+    if (typeof candidate !== 'function' || typeof requireModule !== 'function'
+      || typeof requireModule.e !== 'function') return;
     const target = candidate.prototype;
     if (!target || patchedTargets.has(target)) return;
 
     const method = (name) => Object.getOwnPropertyDescriptor(target, name)?.value;
-    // Identify MiniAppShare by its methods rather than QQ's changing chunk IDs.
-    // QQMiniAppProcessor also delegates its Lua card clicks to this service.
+    // QQMiniAppProcessor also delegates Lua card clicks to MiniAppShare.
     if (!['execute', 'isMyTarget', 'openMiniAppUrl', 'isTencentDocMiniApp']
       .every((name) => typeof method(name) === 'function')) return;
 
@@ -69,13 +52,17 @@ function installMiniAppBrowser({ shell, globalObject = globalThis }) {
       Object.defineProperty(target, 'execute', {
         ...descriptor,
         value: function executeWithBrowserFallback(...args) {
-          const url = getMiniAppBrowserURL(this.clickArkInfo);
-          // Tencent Docs has its own supported desktop route. Other mini-app
-          // cards cannot run on Linux; open their web content via the portal.
-          if (url && !Reflect.apply(isTencentDocMiniApp, this, [])) {
-            return shell.openExternal(url);
+          // The packaged Linux QQ reports isOpenMiniAppSupported() === false.
+          // Tencent Docs has a separate desktop route which must stay intact.
+          const record = this.clickArkInfo?.msgRecord;
+          if (!Array.isArray(record?.elements)
+            || Reflect.apply(isTencentDocMiniApp, this, [])) {
+            return Reflect.apply(execute, this, args);
           }
-          return Reflect.apply(execute, this, args);
+
+          // Capture the original message now: this service is reused and a
+          // subsequent click can replace clickArkInfo while the chunks load.
+          return loadBrowserMenu(requireModule).then((menu) => menu.handler(record));
         },
       });
       patchedTargets.add(target);
@@ -86,13 +73,13 @@ function installMiniAppBrowser({ shell, globalObject = globalThis }) {
 
   observeRendererModules({
     globalObject,
-    onExports(exports) {
-      patchCandidate(exports);
+    onExports(exports, requireModule) {
+      patchCandidate(exports, requireModule);
       if (!exports || !['object', 'function'].includes(typeof exports)) return;
       for (const key of Reflect.ownKeys(exports)) {
         if (key === 'prototype') continue;
         try {
-          patchCandidate(Reflect.get(exports, key));
+          patchCandidate(Reflect.get(exports, key), requireModule);
         } catch {
           // A circular Webpack export may not have initialized yet.
         }
@@ -103,4 +90,4 @@ function installMiniAppBrowser({ shell, globalObject = globalThis }) {
   return true;
 }
 
-module.exports = { getMiniAppBrowserURL, installMiniAppBrowser };
+module.exports = { installMiniAppBrowser };

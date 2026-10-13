@@ -29,7 +29,9 @@ function observeRendererModules({ globalObject = globalThis, onExports }) {
       const result = Reflect.apply(factory, this, args);
       for (const observer of observers) {
         try {
-          observer(args[0]?.exports);
+          // Preserve the QQ runtime's require so a patch can load and reuse
+          // an existing lazy service, including before its first UI use.
+          observer(args[0]?.exports, args[2]);
         } catch {
           // A compatibility hook must not prevent QQ modules from loading.
         }

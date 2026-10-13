@@ -79,8 +79,6 @@ module.exports = function loadRendererPreload(loader) {
   }
   require('./disable-updates.js');
   if (!process.contextIsolated) {
-    require('./miniapp-browser.js').installMiniAppBrowser({
-      shell: require('electron').shell,
-    });
+    require('./miniapp-browser.js').installMiniAppBrowser();
   }
 };

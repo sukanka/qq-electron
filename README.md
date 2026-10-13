@@ -50,11 +50,18 @@ QQ 的版本更新应通过重新构建和升级 AUR 软件包完成。
 
 当前请求不附带父窗口标识或 Wayland activation token，浏览器的窗口激活行为由桌面决定。
 
-小程序卡片默认使用与右键“用浏览器打开”相同的卡片地址字段（`qqdocurl`、`url`、`jumpUrl`），选取可用的 HTTP/HTTPS 地址。腾讯文档保留原有桌面打开方式；没有可用网页地址的卡片仍由 QQ 处理。
+当前打包的 Linux QQ 不支持原生小程序。点击此类卡片时，兼容层将原始消息记录直接交给 QQ 的右键“用浏览器打开”处理器；首次使用会按需加载原菜单模块。地址解析与打开行为均由原右键流程处理，避免打开点击流程中改写的小程序扫码入口。腾讯文档以及没有原始消息记录的入口保留 QQ 原有处理方式。
 
 ## 验证
 
 JavaScript 测试使用 `node --test tests/*.test.js`。`bash tests/portal-integration.sh` 会编译原生模块，并在隔离的 D-Bus 会话中验证 portal 请求及不执行 fork 的约束，不会打开真实浏览器；需要 C 编译器、Node.js 开发头文件、GIO、D-Bus、Python 和 PyGObject，安装 Electron 40 时也会验证其 Node 运行模式和真实主进程中的 `shell.openExternal()` 接入。
+
+安装当前版本的 `qq-electron` 后，可用下面的测试加载 QQ 原始字节码，验证首次点击小程序与右键“用浏览器打开”的结果一致。测试模拟浏览器调用，不启动 QQ 界面或打开网页：
+
+```sh
+ELECTRON_RUN_AS_NODE=1 LD_PRELOAD=/usr/lib/QQ/libelectron-compat.so \
+  /usr/lib/electron40/electron tests/miniapp-qq-integration.js
+```
 
 ## 风险提示
 

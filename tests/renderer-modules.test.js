@@ -80,7 +80,11 @@ test('patches before a webpack push override executes factories and calls the or
 test('preserves factory receiver, arguments and return value while observing final exports', () => {
   const globalObject = {};
   const seen = [];
-  observeRendererModules({ globalObject, onExports: (value) => seen.push(value) });
+  const runtimes = [];
+  observeRendererModules({ globalObject, onExports: (value, require) => {
+    seen.push(value);
+    runtimes.push(require);
+  } });
   const receiver = {};
   const module = { exports: {} };
   const initialExports = module.exports;
@@ -98,6 +102,7 @@ test('preserves factory receiver, arguments and return value while observing fin
   globalObject.webpackChunkqq_chat.push(chunk);
   assert.equal(chunk[1].example.call(receiver, module, initialExports, requireModule), 123);
   assert.deepEqual(seen, ['replacement exports']);
+  assert.deepEqual(runtimes, [requireModule]);
 });
 
 test('observer failure does not abort QQ or other observers; factory failures still propagate', () => {
