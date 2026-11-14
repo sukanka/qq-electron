@@ -6,3 +6,4 @@ linuxqq_*/*
 qq-electron/*
 *.zst
 *.log
+inspect-deb/
