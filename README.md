@@ -13,7 +13,7 @@
 - 重定向 QQ 的 preload，使不同窗口共用兼容入口并正确加载 `major.node`。
 - 补齐辅助窗口继承普通 preload 时缺失的 `proxyInvoke`，复用 QQ 原有 IPC 完成窗口操作。
 - 兼容 QQ 自带的 V8 code cache 与系统 Electron 的运行环境。
-- 通过一个小型原生兼容库补充 QQ 所需、上游 Electron 未导出的模块注册符号。
+- 通过一个小型原生兼容库补充 QQ 所需、上游 Electron 未导出的模块注册符号和环境停止状态查询符号。
 - 通过进程内 D-Bus 调用桌面 OpenURI portal 打开外部链接，避免 QQ 原生模块在启动 `xdg-open` 的 fork 回调中崩溃。
 - 点击 Linux 不支持的小程序卡片时，用默认浏览器打开卡片中的网页地址。
 - 固定到打包安装的 QQ 版本，阻止下载版本覆盖它，并禁用 QQ 的自动更新和热更新检查。
@@ -32,7 +32,7 @@ QQ 的版本更新应通过重新构建和升级 AUR 软件包完成。
 - `code-cache.js`：`resourcesPath` 和 V8 code cache 兼容处理。
 - `disable-updates.js`：阻止 QQ 热更新检查。
 - `scripts/decrypt-application.js`：在构建阶段解密并重新封装 `application.asar`。
-- `electron-compat.c`：原生模块注册符号兼容层。
+- `electron-compat.c`：原生模块注册符号兼容层，并补出 `node::IsEnvironmentStopping(v8::Isolate*)`（通过环境 cleanup 回调观察停止状态）。
 - `portal-shell.js`：将主进程和 preload 的 `shell.openExternal()` 接入桌面 portal。
 - `portal-open-uri.c`：使用 Node-API 和 GIO 在进程内发送 portal 请求，异步等待打开结果。
 - `PKGBUILD`：下载官方 QQ、组装文件并构建 Arch Linux 软件包。
