@@ -1,12 +1,12 @@
 # Maintainer: sukanka
 
-_base_pkgver=3.2.34-53644
-_nt_ver=9.9.36
-_md5=9ee04bef
+_base_pkgver=3.2.35-54395
+_nt_ver=9.9.37
+_md5=816b3c79
 _electron=electron40
 pkgname=qq-electron
 pkgver="${_base_pkgver//-/_}"
-pkgrel=17
+pkgrel=1
 pkgdesc='Tencent QQ running on the system Electron 40 runtime'
 arch=('x86_64')
 url='https://im.qq.com/linuxqq/index.shtml'
@@ -29,7 +29,7 @@ source=(
 )
 sha256sums=('SKIP'
             'b8042dd1f0ce903570a3927eed4fc4e698ed94b96688b90ca5084d0684bffdf2')
-sha256sums_x86_64=('436c65e1dd28422e128a21cbddb5fe4e2e6c079d7f27fec2541e014d38cc336e')
+sha256sums_x86_64=('7de03862327abbd16da27130413698c9517782b27194afc593bc3abf9b55f9ac')
 
 prepare() {
     local source_root="${srcdir}/linuxqq-root"
